@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+  <body style="margin:0;background:#090b14;color:#f5f7fc;font-family:Arial,sans-serif">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:40px 16px;background:#090b14">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;padding:32px;border:1px solid #293044;border-radius:16px;background:#111522">
+          <tr><td>
+            <p style="margin:0;color:#b681ff;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase">AniSuba</p>
+            <h1 style="margin:14px 0 8px;font-size:27px">Verifica tu cuenta</h1>
+            <p style="margin:0;color:#a8b0c2;font-size:14px;line-height:1.6">Ingresa este código de seis dígitos en la pantalla de verificación:</p>
+            <p style="margin:24px 0;padding:18px;border-radius:12px;background:#191e30;color:#c9a4ff;font-size:34px;font-weight:800;letter-spacing:12px;text-align:center">{{ .Token }}</p>
+            <p style="margin:0 0 18px;color:#747e94;font-size:12px;line-height:1.6">También puedes verificar tu cuenta con el siguiente botón.</p>
+            <a href="{{ .ConfirmationURL }}" style="display:block;padding:14px 20px;border-radius:9px;background:#8b5cf6;color:#fff;font-size:14px;font-weight:700;text-align:center;text-decoration:none">Verificar mi cuenta</a>
+            <p style="margin:22px 0 0;color:#596278;font-size:11px">Si no creaste esta cuenta, puedes ignorar este correo.</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>

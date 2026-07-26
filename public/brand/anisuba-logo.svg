@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 315 108" role="img" aria-labelledby="title desc">
+  <title id="title">AniSuba</title>
+  <desc id="desc">Logo completo de AniSuba con isotipo y nombre</desc>
+  <defs>
+    <linearGradient id="a" x1="52" y1="5" x2="52" y2="100" gradientUnits="userSpaceOnUse"><stop stop-color="#c05cff"/><stop offset=".38" stop-color="#8b5cf6"/><stop offset=".7" stop-color="#4d7cfe"/><stop offset="1" stop-color="#ff4b91"/></linearGradient>
+    <linearGradient id="o" x1="22" y1="49" x2="84" y2="69" gradientUnits="userSpaceOnUse"><stop stop-color="#25d9f2"/><stop offset="1" stop-color="#7cf7ff"/></linearGradient>
+    <linearGradient id="word" x1="165" y1="32" x2="285" y2="75" gradientUnits="userSpaceOnUse"><stop stop-color="#a855f7"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+    <mask id="cut"><rect width="108" height="108" fill="white"/><path d="M52 31 36 67h32L52 31Z" fill="black"/></mask>
+  </defs>
+  <g transform="translate(2 2)">
+    <path d="M52 4 99 97H79L67 75H37L25 97H5L52 4Z" fill="url(#a)" mask="url(#cut)"/>
+    <path d="M21 64c7-13 18-19 31-19 14 0 26 6 33 19-10-5-21-7-33-7-11 0-21 2-31 7Z" fill="url(#o)"/>
+    <path d="M26 66c8-5 17-7 26-7 10 0 19 2 27 7l-4 5c-7-3-15-5-23-5-7 0-15 2-22 5l-4-5Z" fill="#09111f" opacity=".9"/>
+    <circle cx="52" cy="74" r="14" fill="#7c3aed"/><circle cx="52" cy="74" r="5" fill="#090b14"/>
+  </g>
+  <text x="116" y="67" fill="#f5f7fc" font-family="Sora, Inter, Arial, sans-serif" font-size="44" font-weight="700" letter-spacing="-2">Ani</text>
+  <text x="185" y="67" fill="url(#word)" font-family="Sora, Inter, Arial, sans-serif" font-size="44" font-weight="700" letter-spacing="-2">Suba</text>
+  <text x="119" y="89" fill="#a8b0c2" font-family="Inter, Arial, sans-serif" font-size="12">Tu universo anime, organizado.</text>
+</svg>

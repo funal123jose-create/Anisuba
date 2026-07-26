@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">Isotipo AniSuba</title>
+  <desc id="desc">Letra A futurista en degradado violeta, azul, cian y rosa</desc>
+  <defs>
+    <linearGradient id="a-gradient" x1="50" y1="4" x2="50" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c05cff"/>
+      <stop offset=".38" stop-color="#8b5cf6"/>
+      <stop offset=".7" stop-color="#4d7cfe"/>
+      <stop offset="1" stop-color="#ff4b91"/>
+    </linearGradient>
+    <linearGradient id="orbit-gradient" x1="21" y1="48" x2="81" y2="67" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#25d9f2"/>
+      <stop offset=".52" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#7cf7ff"/>
+    </linearGradient>
+    <radialGradient id="core-gradient" cx="0" cy="0" r="1" gradientTransform="translate(50 72) rotate(90) scale(17)">
+      <stop stop-color="#a855f7"/>
+      <stop offset=".7" stop-color="#6d28d9"/>
+      <stop offset="1" stop-color="#35106f"/>
+    </radialGradient>
+    <filter id="soft-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <mask id="a-cutout">
+      <rect width="100" height="100" fill="white"/>
+      <path d="M50 30 34 65h32L50 30Z" fill="black"/>
+    </mask>
+  </defs>
+  <path d="M50 5 96 93H76L65 72H35L24 93H4L50 5Z" fill="url(#a-gradient)" mask="url(#a-cutout)"/>
+  <path d="M19 62c7-12 18-18 31-18 14 0 25 6 32 18-10-5-21-7-32-7s-21 2-31 7Z" fill="url(#orbit-gradient)" filter="url(#soft-glow)"/>
+  <path d="M24 64c8-5 17-7 26-7 10 0 19 2 27 7l-4 5c-7-3-15-5-23-5-7 0-15 2-22 5l-4-5Z" fill="#09111f" opacity=".88"/>
+  <circle cx="50" cy="72" r="14" fill="url(#core-gradient)" filter="url(#soft-glow)"/>
+  <circle cx="50" cy="72" r="5" fill="#090b14"/>
+  <path d="m20 82-7 11h15l4-10-12-1Zm60 0 7 11H72l-4-10 12-1Z" fill="#ff4b91"/>
+</svg>

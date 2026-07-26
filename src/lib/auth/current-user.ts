@@ -12,6 +12,12 @@ export const getCurrentUserProfile = cache(async () => {
     .eq("id", user.id)
     .maybeSingle();
 
+  const { data: roleRows } = await supabase
+    .from("user_roles")
+    .select("role_key")
+    .eq("user_id", user.id);
+
+  const roles = roleRows?.map(({ role_key }) => role_key) ?? [];
   const metadata = user.user_metadata;
   const metadataName = [metadata.first_name, metadata.last_name].filter(Boolean).join(" ");
   const displayName = profile?.display_name
@@ -26,5 +32,7 @@ export const getCurrentUserProfile = cache(async () => {
     displayName,
     username: profile?.username ?? metadata.username ?? "",
     avatarUrl: profile?.avatar_url ?? null,
+    roles,
+    isAdmin: roles.includes("admin"),
   };
 });

@@ -49,11 +49,11 @@ body {
   font-size: 14px;
   min-height: 100vh;
 }
-button, input { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 a { color: inherit; text-decoration: none; }
 button { color: inherit; }
-button:focus-visible, a:focus-visible, input:focus-visible {
+:is(button, a, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid #a970ff;
   outline-offset: 2px;
 }
@@ -2738,3 +2738,26 @@ h1, h2, h3, .brand-name { font-family: var(--font-sora), "Sora", sans-serif; }
   .anime-confirm-modal.is-delete,.anime-confirm-modal.is-delete *{transition:none!important}
   .anime-confirm-modal.is-abandon,.anime-confirm-modal.is-abandon *{transition:none!important}
 }
+
+/* Final responsive stabilization: animated charts and tracking cards stay inside the viewport. */
+.statistics-primary-grid,
+.statistics-secondary-grid,
+.statistics-primary-grid > .panel,
+.statistics-secondary-grid > .panel,
+.statistics-trend-panel,
+.statistics-trend-chart,
+.statistics-trend-chart .recharts-responsive-container {
+  min-width: 0;
+  max-width: 100%;
+}
+.statistics-trend-chart { overflow: hidden; }
+.tracking-page,
+.tracking-layout,
+.tracking-groups,
+.tracking-groups > section,
+.tracking-groups > section > div,
+.tracking-card {
+  min-width: 0;
+  max-width: 100%;
+}
+.tracking-page { overflow-x: clip; }

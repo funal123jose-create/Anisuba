@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
   Bell,
@@ -97,12 +97,49 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "AS";
 }
 
-export function AppShell({ children, profile }: { children: ReactNode; profile: AppShellProfile }) {
+export function AppShell({
+  children,
+  profile,
+  canAccessAdmin,
+}: {
+  children: ReactNode;
+  profile: AppShellProfile;
+  canAccessAdmin: boolean;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const profilePopoverRef = useRef<HTMLDivElement>(null);
   const avatarText = initials(profile.displayName);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+
+    const button = profileButtonRef.current;
+    const popover = profilePopoverRef.current;
+    popover?.querySelector<HTMLElement>("button, a, [tabindex]:not([tabindex='-1'])")?.focus();
+
+    const closeAndRestoreFocus = () => {
+      setProfileOpen(false);
+      button?.focus();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeAndRestoreFocus();
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!popover?.contains(target) && !button?.contains(target)) setProfileOpen(false);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [profileOpen]);
 
   return (
     <div className={cn("app-shell", collapsed && "sidebar-collapsed")}>
@@ -123,14 +160,16 @@ export function AppShell({ children, profile }: { children: ReactNode; profile: 
           <NavigationGroup label="Principal" items={primaryNav} collapsed={collapsed} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
           <NavigationGroup label="Actividad" items={activityNav} collapsed={collapsed} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
           <NavigationGroup label="Sistema" items={systemNav} collapsed={collapsed} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
-          <div className="nav-group admin-group">
-            {!collapsed && <p className="nav-group-label">Administración</p>}
-            <Link className={cn("nav-link", pathname === "/admin" && "is-active")} href="/admin" title={collapsed ? "Panel administrativo" : undefined}>
-              <Shield aria-hidden="true" size={18} strokeWidth={1.8} />
-              {!collapsed && <span>Panel administrativo</span>}
-              {!collapsed && <span className="admin-dot" aria-hidden="true" />}
-            </Link>
-          </div>
+          {canAccessAdmin && (
+            <div className="nav-group admin-group">
+              {!collapsed && <p className="nav-group-label">Administración</p>}
+              <Link className={cn("nav-link", pathname === "/admin" && "is-active")} href="/admin" title={collapsed ? "Panel administrativo" : undefined}>
+                <Shield aria-hidden="true" size={18} strokeWidth={1.8} />
+                {!collapsed && <span>Panel administrativo</span>}
+                {!collapsed && <span className="admin-dot" aria-hidden="true" />}
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="sidebar-user">
@@ -175,15 +214,23 @@ export function AppShell({ children, profile }: { children: ReactNode; profile: 
               <Bell size={18} />
               <span className="notification-dot" />
             </button>
-            <button className="profile-button" type="button" aria-label={`Abrir menú de ${profile.displayName}`} aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>
+            <button
+              ref={profileButtonRef}
+              className="profile-button"
+              type="button"
+              aria-label={`Abrir menú de ${profile.displayName}`}
+              aria-expanded={profileOpen}
+              aria-haspopup="menu"
+              onClick={() => setProfileOpen((value) => !value)}
+            >
               <span className="avatar avatar-sm avatar-jose" aria-hidden="true">{avatarText}</span>
               <span className="profile-copy"><strong>{profile.displayName}</strong><small>{profile.username ? `@${profile.username}` : "Mi perfil"}</small></span>
               <ChevronLeft className="rotate-90" size={14} />
             </button>
             {profileOpen && (
-              <div className="profile-popover">
+              <div ref={profilePopoverRef} className="profile-popover" role="menu" aria-label="Menú de perfil">
                 <span><strong>{profile.displayName}</strong><small>{profile.email}</small></span>
-                <form action={logoutAction}><button type="submit"><LogOut size={15} />Cerrar sesión</button></form>
+                <form action={logoutAction}><button role="menuitem" type="submit"><LogOut size={15} />Cerrar sesión</button></form>
               </div>
             )}
           </div>

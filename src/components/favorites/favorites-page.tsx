@@ -84,7 +84,7 @@ export function FavoritesPage({ data, isDemo }: FavoritesPageProps) {
   return (
     <div className="favorites-page">
       <header className="favorites-header">
-        <Image alt="" className="favorites-header-image" fill priority src="/images/favorites-purple-guardian-v1.png" />
+        <Image alt="" className="favorites-header-image" fill priority sizes="100vw" src="/images/favorites-purple-guardian-v1.png" />
         <div className="favorites-header-overlay" />
         <div className="favorites-title"><Heart size={39} /><div><h1>Mis Favoritos</h1><p>Tus animes más especiales, en un solo lugar.</p></div></div>
         {isDemo && <div className="demo-data-pill"><Sparkles size={14} /><strong>Modo demo</strong><span>Selección de muestra</span></div>}

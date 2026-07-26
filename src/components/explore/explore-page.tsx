@@ -133,7 +133,7 @@ export function ExplorePage({ data, isDemo }: ExplorePageProps) {
 
           {featured ? (
             <section className="explore-featured">
-              <Image alt="" className="explore-featured-image" fill priority src={featured.bannerUrl} />
+              <Image alt="" className="explore-featured-image" fill priority sizes="(max-width: 900px) 100vw, 70vw" src={featured.bannerUrl} />
               <div className="explore-featured-overlay" />
               <div className="explore-featured-copy">
                 <span>Anime destacado</span>

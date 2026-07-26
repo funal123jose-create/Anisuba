@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   images: {
+    qualities: [70, 75, 90, 92],
     remotePatterns: [
       {
         protocol: "https",

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Bookmark,
   CalendarDays,
@@ -23,17 +23,37 @@ import type { FavoriteAnime, FavoritesData } from "@/types/favorites";
 type FavoritesPageProps = {
   data: FavoritesData;
   isDemo: boolean;
+  onRemoveFavorite?: (input: {
+    franchiseId: string;
+    favorite: boolean;
+  }) => Promise<{ ok: boolean; message?: string }>;
 };
 
 type FavoriteSort = "score" | "recent" | "title";
 
-function FavoriteCard({ anime, rank, onRemove }: { anime: FavoriteAnime; rank: number; onRemove: () => void }) {
+function FavoriteCard({
+  anime,
+  isDemo,
+  onRemove,
+  rank,
+}: {
+  anime: FavoriteAnime;
+  isDemo: boolean;
+  onRemove: () => void;
+  rank: number;
+}) {
   return (
     <article className="favorite-card micro-lift">
       <div className="favorite-cover">
         <Image alt={`Portada de ${anime.title}`} fill sizes="(max-width: 680px) 44vw, 220px" src={anime.coverUrl} />
         <span className="favorite-rank">#{rank}</span>
-        <button aria-label={`Quitar ${anime.title} de favoritos demo`} onClick={onRemove} type="button"><Heart fill="currentColor" size={12} />Favorito</button>
+        <button
+          aria-label={`Quitar ${anime.title} de favoritos${isDemo ? " demo" : ""}`}
+          onClick={onRemove}
+          type="button"
+        >
+          <Heart fill="currentColor" size={12} />Favorito
+        </button>
       </div>
       <div className="favorite-card-body">
         <h3>{anime.title}</h3>
@@ -49,13 +69,15 @@ function FavoriteCard({ anime, rank, onRemove }: { anime: FavoriteAnime; rank: n
   );
 }
 
-export function FavoritesPage({ data, isDemo }: FavoritesPageProps) {
+export function FavoritesPage({ data, isDemo, onRemoveFavorite }: FavoritesPageProps) {
   const [sort, setSort] = useState<FavoriteSort>("score");
   const [genre, setGenre] = useState("all");
   const [year, setYear] = useState("all");
   const [added, setAdded] = useState("all");
   const [removed, setRemoved] = useState<Record<string, boolean>>({});
   const [activeGenre, setActiveGenre] = useState<number | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [, startRemoveTransition] = useTransition();
 
   const genres = useMemo(() => Array.from(new Set(data.items.flatMap((item) => item.genres))).sort((a, b) => a.localeCompare(b, "es")), [data.items]);
   const years = useMemo(() => Array.from(new Set(data.items.map((item) => item.year))).sort((a, b) => b - a), [data.items]);
@@ -80,11 +102,44 @@ export function FavoritesPage({ data, isDemo }: FavoritesPageProps) {
     setYear("all");
     setAdded("all");
   };
+  const removeFavorite = (anime: FavoriteAnime) => {
+    setRemoved((current) => ({ ...current, [anime.id]: true }));
+    setRemoveError(null);
+    if (isDemo) return;
+    if (!onRemoveFavorite) {
+      setRemoved((current) => ({ ...current, [anime.id]: false }));
+      setRemoveError("No pudimos actualizar tus favoritos.");
+      return;
+    }
+    startRemoveTransition(async () => {
+      const result = await onRemoveFavorite({
+        franchiseId: anime.id,
+        favorite: false,
+      });
+      if (!result.ok) {
+        setRemoved((current) => ({ ...current, [anime.id]: false }));
+        setRemoveError(result.message ?? "No pudimos quitar el favorito.");
+        return;
+      }
+      window.location.reload();
+    });
+  };
 
   return (
     <div className="favorites-page">
       <header className="favorites-header">
-        <Image alt="" className="favorites-header-image" fill priority sizes="100vw" src="/images/favorites-purple-guardian-v1.png" />
+        <video
+          aria-hidden="true"
+          autoPlay
+          className="favorites-header-video"
+          loop
+          muted
+          playsInline
+          poster="/images/favorites-purple-guardian-v1.png"
+          preload="metadata"
+        >
+          <source src="/videos/favorites-purple-loop.mp4" type="video/mp4" />
+        </video>
         <div className="favorites-header-overlay" />
         <div className="favorites-title"><Heart size={39} /><div><h1>Mis Favoritos</h1><p>Tus animes más especiales, en un solo lugar.</p></div></div>
         {isDemo && <div className="demo-data-pill"><Sparkles size={14} /><strong>Modo demo</strong><span>Selección de muestra</span></div>}
@@ -109,7 +164,15 @@ export function FavoritesPage({ data, isDemo }: FavoritesPageProps) {
 
           {visibleItems.length ? (
             <div className="favorites-grid">
-              {visibleItems.map((anime) => <FavoriteCard anime={anime} key={anime.id} onRemove={() => setRemoved((current) => ({ ...current, [anime.id]: true }))} rank={ranking.findIndex((entry) => entry.id === anime.id) + 1} />)}
+              {visibleItems.map((anime) => (
+                <FavoriteCard
+                  anime={anime}
+                  isDemo={isDemo}
+                  key={anime.id}
+                  onRemove={() => removeFavorite(anime)}
+                  rank={ranking.findIndex((entry) => entry.id === anime.id) + 1}
+                />
+              ))}
             </div>
           ) : (
             <section className="favorites-empty panel"><span><Heart size={23} /></span><h2>{data.totalFavorites === 0 ? "Aún no tienes favoritos" : "No hay coincidencias"}</h2><p>{data.totalFavorites === 0 ? "Marca tus animes más especiales y aparecerán en esta colección." : "Prueba restableciendo los filtros para recuperar tu selección."}</p><button onClick={resetFilters} type="button">Restablecer filtros</button></section>
@@ -162,6 +225,7 @@ export function FavoritesPage({ data, isDemo }: FavoritesPageProps) {
           </section>
         </aside>
       </div>
+      {removeError && <div className="manual-toast is-error" role="alert">{removeError}</div>}
     </div>
   );
 }

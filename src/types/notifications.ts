@@ -10,6 +10,7 @@ export type NotificationItem = {
   imageUrl: string;
   unread: boolean;
   action: "view" | "remind" | "none";
+  href?: string;
 };
 
 export type NotificationPreference = {

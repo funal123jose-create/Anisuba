@@ -75,7 +75,18 @@ export function ProfilePage({ data, isDemo }: ProfilePageProps) {
   return (
     <div className="profile-page">
       <section className="profile-hero panel">
-        <Image alt="" className="profile-banner-image" fill priority sizes="100vw" src={data.user.bannerUrl} />
+        <video
+          aria-hidden="true"
+          autoPlay
+          className="profile-banner-video"
+          loop
+          muted
+          playsInline
+          poster={data.user.bannerUrl}
+          preload="metadata"
+        >
+          <source src="/videos/profile-cosmic-loop.mp4" type="video/mp4" />
+        </video>
         <div className="profile-banner-overlay" />
 
         <div className="profile-identity">

@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { AddAnimePage } from "@/components/anime/add-anime-page";
 import { AnimeEditPage } from "@/components/anime/anime-edit-page";
 import { ManualAnimePage } from "@/components/anime/manual-anime-page";
@@ -7,6 +7,7 @@ import { SeasonManagementPage } from "@/components/anime/season-management-page"
 import { PublicProfilePage } from "@/components/profile/public-profile-page";
 import { TrackingPage } from "@/components/tracking/tracking-page";
 import { InterfaceStatesPage } from "@/components/ui/interface-states-page";
+import { libraryDemoData } from "@/data/mock/library";
 
 describe("Mockups 19 al 23", () => {
   it("presenta el perfil público y sus pestañas", () => {
@@ -19,25 +20,51 @@ describe("Mockups 19 al 23", () => {
   });
 
   it("filtra el seguimiento por estado", () => {
-    render(<TrackingPage />);
+    render(<TrackingPage data={libraryDemoData} isDemo />);
     expect(screen.getByRole("heading", { name: "Mi seguimiento" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Actualizar progreso" })).toHaveLength(4);
     expect(screen.getAllByRole("link", { name: "Ver detalle" }).length).toBeGreaterThan(0);
-    const gardensBefore = screen.getAllByText("Jardín de los Recuerdos").length;
-    fireEvent.click(screen.getByRole("button", { name: "Ver más de Viendo actualmente" }));
-    expect(screen.getAllByText("Jardín de los Recuerdos").length).toBeGreaterThan(gardensBefore);
-    fireEvent.click(screen.getByRole("button", { name: /Planeo ver28/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Planeo ver3/ }));
     expect(screen.getByRole("heading", { name: /Planeo ver/ })).toBeInTheDocument();
+    expect(screen.getAllByText("Jardín de los Recuerdos").length).toBeGreaterThan(0);
   });
 
-  it("agrega un resultado API en modo demo", () => {
+  it("consulta y revisa un resultado real del contrato AniList", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(JSON.stringify({
+      pageInfo: { currentPage: 1, hasNextPage: false, lastPage: 1, total: 1 },
+      results: [{
+        id: 21,
+        idMal: 21,
+        title: "One Piece",
+        nativeTitle: "ワンピース",
+        alternativeTitle: "One Piece",
+        description: "Monkey D. Luffy navega en busca del One Piece.",
+        format: "TV",
+        status: "RELEASING",
+        season: "FALL",
+        seasonYear: 1999,
+        episodes: null,
+        duration: 24,
+        averageScore: 88,
+        popularity: 700000,
+        genres: ["Action", "Adventure"],
+        studios: ["Toei Animation"],
+        coverUrl: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELSYx3yMPcKM.jpg",
+        bannerUrl: null,
+        sourceUrl: "https://anilist.co/anime/21",
+        isAlreadyCatalogued: false,
+      }],
+    }), { status: 200 }));
     render(<AddAnimePage />);
     expect(screen.getByRole("link", { name: "Registro manual" })).toHaveAttribute("href", "/agregar-anime/manual");
-    expect(screen.getByText("Jikan API (MyAnimeList)")).toBeInTheDocument();
-    expect(screen.getByText("Abr 6, 2024 – Sep 21, 2024")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Agregar a favoritos" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Agregar a mi biblioteca" }));
-    expect(screen.getByRole("button", { name: "Agregado a mi biblioteca" })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "Buscar anime en AniList" }), { target: { value: "One Piece" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    await waitFor(() => expect(screen.getAllByText("One Piece").length).toBeGreaterThan(0));
+    expect(screen.getByText("AniList GraphQL")).toBeInTheDocument();
+    expect(screen.getByText("ID AniList")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Agregar a favoritos" })).toHaveAttribute("aria-pressed", "false");
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/anilist/search?q=One+Piece"), { cache: "no-store" });
+    fetchMock.mockRestore();
   });
 
   it("guarda un borrador manual localmente", () => {

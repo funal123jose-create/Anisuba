@@ -3,10 +3,11 @@
 import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 import {
-  Bell, Check, ChevronRight, Clock3, Download, Eye, Globe2, ImagePlus, Link2,
-  LockKeyhole, MapPin, Monitor, Moon, Palette, Save, ShieldCheck, Sparkles, Sun,
-  UserRound, Users, X,
+  Bell, Check, ChevronRight, Clock3, Download, Eye, Globe2,
+  ImagePlus, Link2, LockKeyhole, MapPin, Monitor, Moon, Palette,
+  Save, ShieldCheck, Sparkles, Sun, UserRound, Users,
 } from "lucide-react";
+import { MyAnimeListImportDialog } from "@/components/settings/myanimelist-import-dialog";
 
 type SettingsPageProps = {
   displayName: string;
@@ -14,6 +15,7 @@ type SettingsPageProps = {
   email: string;
   avatarUrl: string;
   isDemo: boolean;
+  emailNotificationsEnabled?: boolean;
 };
 
 const accentColors = ["#8b5cf6", "#3b82f6", "#22d3ee", "#ec4899", "#ff5c5c", "#f59e0b", "#34d399", "#facc15", "linear-gradient(135deg,#8b5cf6,#22d3ee,#ec4899)"];
@@ -26,15 +28,15 @@ function SettingsHeading({ icon: Icon, title, description, tone = "#a855f7" }: {
   return <header className="settings-panel-heading" style={{ "--settings-tone": tone } as CSSProperties}><span><Icon size={15} /></span><div><h2>{title}</h2><p>{description}</p></div></header>;
 }
 
-export function SettingsPage({ displayName, username, email, avatarUrl, isDemo }: SettingsPageProps) {
+export function SettingsPage({ displayName, username, email, avatarUrl, isDemo, emailNotificationsEnabled = false }: SettingsPageProps) {
   const [theme, setTheme] = useState("dark");
   const [accent, setAccent] = useState(accentColors[0]);
   const [saved, setSaved] = useState(false);
   const [avatarNotice, setAvatarNotice] = useState(false);
   const [region, setRegion] = useState("CO");
   const [malImportOpen, setMalImportOpen] = useState(false);
-  const [malImportReady, setMalImportReady] = useState(false);
   const [notifications, setNotifications] = useState({ episodes: true, recommendations: true, friends: false, news: true, reminders: true });
+  const [emailNotifications, setEmailNotifications] = useState(emailNotificationsEnabled);
   const [privacy, setPrivacy] = useState({ publicProfile: true, viewing: true, friendsList: false, ranking: true });
   const [integrations, setIntegrations] = useState({ mal: "Conectado", anilist: "Conectado", discord: "Conectar" });
 
@@ -111,6 +113,7 @@ export function SettingsPage({ displayName, username, email, avatarUrl, isDemo }
               const key = item.key as keyof typeof notifications;
               return <article key={item.key}><span><Icon size={15} /></span><div><strong>{item.title}</strong><small>{item.text}</small></div><Toggle checked={notifications[key]} label={item.title} onChange={() => flipNotification(key)} /></article>;
             })}
+            <article><span><Bell size={15} /></span><div><strong>Resumen por correo</strong><small>Recibe un resumen únicamente cuando el canal de correo esté configurado.</small></div><Toggle checked={emailNotifications} label="Resumen por correo" onChange={() => { const next = !emailNotifications; setEmailNotifications(next); void import("@/app/(app)/configuracion/actions").then(({ setEmailNotificationsAction }) => setEmailNotificationsAction(next)); }} /></article>
           </div>
           <button className="settings-panel-link" type="button">Administrar preferencias avanzadas <ChevronRight size={14} /></button>
         </section>
@@ -176,34 +179,11 @@ export function SettingsPage({ displayName, username, email, avatarUrl, isDemo }
         </section>
       </div>
 
-      {malImportOpen && (
-        <div className="settings-modal-backdrop" onMouseDown={() => setMalImportOpen(false)}>
-          <section aria-labelledby="mal-import-title" aria-modal="true" className="settings-import-modal" onMouseDown={(event) => event.stopPropagation()} role="dialog">
-            <header>
-              <span><Download size={18} /></span>
-              <div><p>INTEGRACIÓN PERSONAL</p><h2 id="mal-import-title">Importar desde MyAnimeList</h2></div>
-              <button aria-label="Cerrar importación" onClick={() => setMalImportOpen(false)} type="button"><X size={17} /></button>
-            </header>
-            <p>Revisa cómo AniSuba incorporará tu biblioteca sin sobrescribir actividad existente.</p>
-            <div className="settings-import-summary">
-              <article><strong>146</strong><span>Títulos detectados</span></article>
-              <article><strong>18</strong><span>Coincidencias para revisar</span></article>
-              <article><strong>128</strong><span>Listos para importar</span></article>
-            </div>
-            <ul>
-              <li><Check size={13} />Importación unidireccional: MyAnimeList → AniSuba.</li>
-              <li><ShieldCheck size={13} />Tus credenciales y tokens nunca se mostrarán en el navegador.</li>
-              <li><MapPin size={13} />Región activa: {region === "CO" ? "Colombia" : region}.</li>
-            </ul>
-            <aside><Sparkles size={14} /><span><strong>Modo demo</strong> Esta vista valida el flujo. La conexión OAuth y la importación real se activarán en la etapa lógica.</span></aside>
-            <footer>
-              <button onClick={() => setMalImportOpen(false)} type="button">Cancelar</button>
-              <button onClick={() => setMalImportReady(true)} type="button"><Download size={13} />{malImportReady ? "Vista previa preparada" : "Continuar a previsualización"}</button>
-            </footer>
-            {malImportReady && <p className="settings-import-status" role="status">La previsualización del Mockup 30 quedó preparada como siguiente paso del flujo.</p>}
-          </section>
-        </div>
-      )}
+      <MyAnimeListImportDialog
+        onClose={() => setMalImportOpen(false)}
+        open={malImportOpen}
+        region={region}
+      />
     </div>
   );
 }

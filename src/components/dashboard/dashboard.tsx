@@ -64,6 +64,7 @@ function AnimeCover({ anime, className = "" }: { anime: AnimeCard; className?: s
         src={anime.coverUrl}
         alt={`Portada de ${anime.title}`}
         fill
+        quality={92}
         sizes="(max-width: 680px) 56px, 132px"
       />
     </div>
@@ -154,6 +155,7 @@ export function Dashboard({ data, isDemo = false }: { data: DashboardData; isDem
                   alt=""
                   fill
                   priority
+                  quality={92}
                   sizes="(max-width: 900px) 100vw, 70vw"
                 />
                 <div className="featured-overlay" />
@@ -167,7 +169,7 @@ export function Dashboard({ data, isDemo = false }: { data: DashboardData; isDem
                     <div className="featured-progress"><span><span style={{ width: `${data.featured.progress}%` }} /></span><strong>{data.featured.progress}%</strong></div>
                     <div className="featured-actions">
                       <button type="button"><Play size={14} fill="currentColor" />Ver siguiente episodio</button>
-                      <Link href="/anime/eclipse-del-vacio">Ver detalle<ArrowRight size={14} /></Link>
+                      <Link href={data.featured.sourceUrl.startsWith("/") ? data.featured.sourceUrl : "/anime/eclipse-del-vacio"}>Ver detalle<ArrowRight size={14} /></Link>
                     </div>
                   </div>
                 </div>

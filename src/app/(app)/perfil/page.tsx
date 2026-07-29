@@ -10,7 +10,10 @@ export default async function ProfileRoute() {
         ...data.user,
         displayName: profile.displayName,
         username: profile.username,
-        avatarUrl: profile.avatarUrl ?? data.user.avatarUrl,
+        avatarUrl: profile.avatarUrl
+          ?? (profile.username.toLocaleLowerCase() === "atreus"
+            ? "/images/avatar-subaru-v1.png"
+            : data.user.avatarUrl),
       }
     : data.user;
 

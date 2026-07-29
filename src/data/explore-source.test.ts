@@ -1,19 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyExploreData } from "@/data/explore-empty";
-import { exploreDemoData } from "@/data/mock/explore";
+import { buildRatingDistribution } from "./explore-source";
 
-describe("explore presentation data", () => {
-  it("incluye contenido suficiente para validar el mockup", () => {
-    expect(exploreDemoData.featured.length).toBeGreaterThan(1);
-    expect(exploreDemoData.trending).toHaveLength(6);
-    expect(exploreDemoData.popular).toHaveLength(6);
+describe("buildRatingDistribution", () => {
+  it("calcula la distribución desde las puntuaciones reales sin valores fijos", () => {
+    expect(buildRatingDistribution([1, 4, 5, 7, 8, 9, 9.5])).toEqual([
+      33,
+      0,
+      67,
+      33,
+      100,
+    ]);
   });
 
-  it("no mezcla el catálogo demo con el estado live vacío", () => {
-    const liveData = createEmptyExploreData();
-
-    expect(liveData.featured).toEqual([]);
-    expect(liveData.trending).toEqual([]);
-    expect(liveData.popular).toEqual([]);
+  it("mantiene cinco buckets en un catálogo vacío", () => {
+    expect(buildRatingDistribution([])).toEqual([0, 0, 0, 0, 0]);
   });
 });

@@ -20,6 +20,18 @@ export function AuthShell({ children }: Readonly<{ children: React.ReactNode }>)
           priority
           sizes="(max-width: 900px) 100vw, 58vw"
         />
+        <video
+          aria-hidden="true"
+          autoPlay
+          className="auth-hero-video"
+          loop
+          muted
+          playsInline
+          poster="/auth/auth-city-night.png"
+          preload="auto"
+        >
+          <source src="/auth/auth-city-night-loop.mp4" type="video/mp4" />
+        </video>
         <div className="auth-hero-shade" />
         <div className="auth-hero-content">
           <Logo className="auth-logo" />

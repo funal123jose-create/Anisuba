@@ -12,6 +12,7 @@ import {
   Filter,
   LibraryBig,
   Plus,
+  Radio,
   SearchX,
   Sparkles,
   Star,
@@ -37,26 +38,32 @@ function ExploreCard({
   anime,
   rank,
   compact = false,
+  isDemo,
   isAdded,
   onToggle,
 }: {
   anime: ExploreAnime;
   rank?: number;
   compact?: boolean;
+  isDemo: boolean;
   isAdded: boolean;
   onToggle: () => void;
 }) {
   return (
     <article className={cn("explore-card micro-lift", compact && "is-compact")}>
       <div className="explore-card-cover">
-        <Image alt={`Portada de ${anime.title}`} fill sizes="(max-width: 680px) 44vw, 180px" src={anime.coverUrl} />
+        <Image alt={`Portada de ${anime.title}`} fill quality={92} sizes="(max-width: 680px) 44vw, 180px" src={anime.coverUrl} />
         {rank && <span className="explore-rank">{rank}</span>}
       </div>
       <div className="explore-card-copy">
         <h3>{anime.title}</h3>
         <p><span className="explore-card-context">{compact ? anime.year : `${anime.episodeCount} eps`}</span><span className="explore-card-score"><Star fill="currentColor" size={9} />{anime.score.toFixed(1)}</span></p>
         <button
-          aria-label={isAdded ? `Quitar ${anime.title} de la selección demo` : `Añadir ${anime.title} a la selección demo`}
+          aria-label={isDemo
+            ? isAdded
+              ? `Quitar ${anime.title} de la selección demo`
+              : `Añadir ${anime.title} a la selección demo`
+            : `Revisar y añadir ${anime.title}`}
           aria-pressed={isAdded}
           className={isAdded ? "is-added" : undefined}
           onClick={onToggle}
@@ -69,11 +76,23 @@ function ExploreCard({
   );
 }
 
-function SectionHeading({ icon: Icon, title }: { icon: typeof Zap; title: string }) {
+function SectionHeading({
+  expanded,
+  icon: Icon,
+  onToggle,
+  title,
+}: {
+  expanded: boolean;
+  icon: typeof Zap;
+  onToggle: () => void;
+  title: string;
+}) {
   return (
     <div className="explore-section-heading">
       <div><Icon size={16} /><h2>{title}</h2></div>
-      <button type="button">Ver todos <ChevronRight size={12} /></button>
+      <button aria-expanded={expanded} onClick={onToggle} type="button">
+        {expanded ? "Ver menos" : "Ver todos"} <ChevronRight className={expanded ? "rotate-90" : undefined} size={12} />
+      </button>
     </div>
   );
 }
@@ -93,28 +112,51 @@ export function ExplorePage({ data, isDemo }: ExplorePageProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [added, setAdded] = useState<Record<string, boolean>>({});
   const [bookmarked, setBookmarked] = useState(false);
-  const featured = data.featured[featuredIndex] ?? null;
+  const [showAllTrending, setShowAllTrending] = useState(false);
+  const [showAllPopular, setShowAllPopular] = useState(false);
 
   const years = useMemo(() => [...new Set(catalog.map((item) => item.year))].sort((a, b) => b - a), [catalog]);
   const genres = useMemo(() => unique(catalog.flatMap((item) => item.genres)), [catalog]);
   const studios = useMemo(() => unique(catalog.map((item) => item.studio)), [catalog]);
-  const visiblePopular = useMemo(() => catalog
+  const matchesFilters = (item: ExploreAnime) =>
+    (genre === "all" || item.genres.includes(genre))
+    && (year === "all" || item.year === Number(year))
+    && (season === "all" || item.season === season)
+    && (studio === "all" || item.studio === studio)
+    && (format === "all" || item.format === format)
+    && (score === "all" || item.score >= Number(score));
+  const featuredCatalog = data.featured.filter(matchesFilters);
+  const featured = featuredCatalog.length
+    ? featuredCatalog[featuredIndex % featuredCatalog.length]
+    : null;
+  const filteredCatalog = useMemo(() => catalog
     .filter((item) => genre === "all" || item.genres.includes(genre))
     .filter((item) => year === "all" || item.year === Number(year))
     .filter((item) => season === "all" || item.season === season)
     .filter((item) => studio === "all" || item.studio === studio)
     .filter((item) => format === "all" || item.format === format)
     .filter((item) => score === "all" || item.score >= Number(score))
-    .toSorted((a, b) => sort === "rating" ? b.score - a.score : sort === "newest" ? b.year - a.year : data.popular.findIndex((entry) => entry.id === a.id) - data.popular.findIndex((entry) => entry.id === b.id))
-    .slice(0, 6), [catalog, data.popular, format, genre, score, season, sort, studio, year]);
+    .toSorted((a, b) => sort === "rating" ? b.score - a.score : sort === "newest" ? b.year - a.year : (b.popularity ?? 0) - (a.popularity ?? 0)),
+  [catalog, format, genre, score, season, sort, studio, year]);
+  const visiblePopular = showAllPopular ? filteredCatalog : filteredCatalog.slice(0, 6);
+  const filteredTrending = data.trending.filter(matchesFilters);
+  const visibleTrending = showAllTrending ? filteredTrending : filteredTrending.slice(0, 6);
 
-  const toggleAdded = (id: string) => setAdded((current) => ({ ...current, [id]: !current[id] }));
+  const toggleAdded = (anime: ExploreAnime) => {
+    if (!isDemo) {
+      window.location.assign(`/agregar-anime?query=${encodeURIComponent(anime.title)}`);
+      return;
+    }
+    setAdded((current) => ({ ...current, [anime.id]: !current[anime.id] }));
+  };
 
   return (
     <div className="explore-page">
       <header className="explore-header">
         <div><h1>Explorar</h1><p>Descubre nuevos mundos, historias y emociones.</p></div>
-        {isDemo && <div className="demo-data-pill"><Sparkles size={14} /><strong>Modo demo</strong><span>Catálogo de muestra</span></div>}
+        {isDemo
+          ? <div className="demo-data-pill"><Sparkles size={14} /><strong>Modo demo</strong><span>Catálogo de muestra</span></div>
+          : <div className="explore-live-pill" title={data.fetchedAt ? `Actualizado: ${new Date(data.fetchedAt).toLocaleString("es-PE")}` : undefined}><Radio size={13} /><strong>{data.sourceLabel ?? "AniList en vivo"}</strong><span>Actualizado al abrir</span></div>}
       </header>
 
       <div className="explore-layout">
@@ -133,40 +175,40 @@ export function ExplorePage({ data, isDemo }: ExplorePageProps) {
 
           {featured ? (
             <section className="explore-featured">
-              <Image alt="" className="explore-featured-image" fill priority sizes="(max-width: 900px) 100vw, 70vw" src={featured.bannerUrl} />
+              <Image alt="" className="explore-featured-image" fill priority quality={92} sizes="(max-width: 900px) 100vw, 70vw" src={featured.bannerUrl} />
               <div className="explore-featured-overlay" />
               <div className="explore-featured-copy">
                 <span>Anime destacado</span>
                 <h2>{featured.title}</h2>
                 <p className="explore-featured-meta">{featured.year} · {featured.episodeCount} episodios · {featured.studio}</p>
                 <div className="explore-featured-genres">{featured.genres.map((item) => <span key={item}>{item}</span>)}</div>
-                <p>{featured.synopsis}</p>
+                <p title={featured.synopsis}>{featured.synopsis}</p>
                 <div className="explore-featured-actions">
-                  <Link href="/anime/eclipse-del-vacio">Ver detalles</Link>
+                  <Link href={isDemo ? "/anime/eclipse-del-vacio" : `/agregar-anime?query=${encodeURIComponent(featured.title)}`}>Revisar y añadir</Link>
                   <button aria-label={bookmarked ? "Quitar destacado de guardados" : "Guardar destacado"} aria-pressed={bookmarked} className={bookmarked ? "is-saved" : undefined} onClick={() => setBookmarked((current) => !current)} type="button"><Bookmark fill={bookmarked ? "currentColor" : "none"} size={16} /></button>
                 </div>
               </div>
-              <div className="explore-carousel-dots">{data.featured.map((item, index) => <button aria-label={`Mostrar ${item.title}`} aria-pressed={featuredIndex === index} className={featuredIndex === index ? "is-active" : undefined} key={item.id} onClick={() => setFeaturedIndex(index)} type="button" />)}</div>
+              <div className="explore-carousel-dots">{featuredCatalog.map((item, index) => <button aria-label={`Mostrar ${item.title}`} aria-pressed={featuredIndex % featuredCatalog.length === index} className={featuredIndex % featuredCatalog.length === index ? "is-active" : undefined} key={item.id} onClick={() => setFeaturedIndex(index)} type="button" />)}</div>
               <div className="explore-carousel-arrows">
-                <button aria-label="Destacado anterior" onClick={() => setFeaturedIndex((current) => (current - 1 + data.featured.length) % data.featured.length)} type="button"><ChevronLeft size={17} /></button>
-                <button aria-label="Destacado siguiente" onClick={() => setFeaturedIndex((current) => (current + 1) % data.featured.length)} type="button"><ChevronRight size={17} /></button>
+                <button aria-label="Destacado anterior" onClick={() => setFeaturedIndex((current) => (current - 1 + featuredCatalog.length) % featuredCatalog.length)} type="button"><ChevronLeft size={17} /></button>
+                <button aria-label="Destacado siguiente" onClick={() => setFeaturedIndex((current) => (current + 1) % featuredCatalog.length)} type="button"><ChevronRight size={17} /></button>
               </div>
             </section>
           ) : (
             <section className="explore-empty panel"><span><SearchX size={22} /></span><h2>El catálogo aún está vacío</h2><p>Los títulos disponibles aparecerán aquí cuando el catálogo real tenga registros.</p></section>
           )}
 
-          {data.trending.length > 0 && (
+          {visibleTrending.length > 0 && (
             <section className="explore-content-section">
-              <SectionHeading icon={Zap} title="Tendencias" />
-              <div className="explore-card-row">{data.trending.map((anime, index) => <ExploreCard anime={anime} compact isAdded={Boolean(added[anime.id])} key={anime.id} onToggle={() => toggleAdded(anime.id)} rank={index + 1} />)}</div>
+              <SectionHeading expanded={showAllTrending} icon={Zap} onToggle={() => setShowAllTrending((current) => !current)} title="Tendencias" />
+              <div className={cn("explore-card-row", showAllTrending && "is-expanded")}>{visibleTrending.map((anime, index) => <ExploreCard anime={anime} compact isAdded={Boolean(added[anime.id])} isDemo={isDemo} key={anime.id} onToggle={() => toggleAdded(anime)} rank={index + 1} />)}</div>
             </section>
           )}
 
           <section className="explore-content-section">
-            <SectionHeading icon={Flame} title="Populares" />
+            <SectionHeading expanded={showAllPopular} icon={Flame} onToggle={() => setShowAllPopular((current) => !current)} title="Populares" />
             {visiblePopular.length > 0 ? (
-              <div className="explore-card-row">{visiblePopular.map((anime) => <ExploreCard anime={anime} isAdded={Boolean(added[anime.id])} key={anime.id} onToggle={() => toggleAdded(anime.id)} />)}</div>
+              <div className={cn("explore-card-row", showAllPopular && "is-expanded")}>{visiblePopular.map((anime) => <ExploreCard anime={anime} isAdded={Boolean(added[anime.id])} isDemo={isDemo} key={anime.id} onToggle={() => toggleAdded(anime)} />)}</div>
             ) : (
               <div className="explore-results-empty">No hay títulos que coincidan con estos filtros.</div>
             )}
@@ -186,7 +228,7 @@ export function ExplorePage({ data, isDemo }: ExplorePageProps) {
           </section>
           <section className="panel explore-rating-panel">
             <PanelHeading icon={Star} meta="Esta temporada" title="Calificación promedio" tone="#f59e0b" />
-            <div className="explore-rating-value"><Star fill="currentColor" size={24} /><strong>{data.averageRating.toFixed(2)}</strong><span><TrendingUp size={11} />+{data.ratingDelta.toFixed(2)} vs temporada anterior</span></div>
+            <div className="explore-rating-value"><Star fill="currentColor" size={24} /><strong>{data.averageRating.toFixed(2)}</strong><span><TrendingUp size={11} />Catálogo consultado en vivo</span></div>
             <div className="explore-rating-bars">{data.ratingDistribution.map((value, index) => <span key={`${value}-${index}`}><span style={{ height: `${value}%` }} /></span>)}</div>
             <div className="explore-rating-axis"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
             <p>Puntuación</p>

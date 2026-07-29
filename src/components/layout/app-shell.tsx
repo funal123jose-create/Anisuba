@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -39,7 +40,7 @@ const primaryNav: NavItem[] = [
 const activityNav: NavItem[] = [
   { label: "Historial", href: "/historial", icon: Clock3 },
   { label: "Estadísticas", href: "/estadisticas", icon: BarChart3 },
-  { label: "Notificaciones", href: "/notificaciones", icon: Bell, badge: "3" },
+  { label: "Notificaciones", href: "/notificaciones", icon: Bell },
 ];
 
 const systemNav: NavItem[] = [
@@ -97,14 +98,24 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "AS";
 }
 
+function UserAvatar({ src, text }: { src: string | null; text: string }) {
+  return (
+    <span className="avatar avatar-sm avatar-jose" aria-hidden="true">
+      {src ? <Image alt="" fill sizes="32px" src={src} /> : text}
+    </span>
+  );
+}
+
 export function AppShell({
   children,
   profile,
   canAccessAdmin,
+  notificationCount,
 }: {
   children: ReactNode;
   profile: AppShellProfile;
   canAccessAdmin: boolean;
+  notificationCount: number;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -113,6 +124,14 @@ export function AppShell({
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const profilePopoverRef = useRef<HTMLDivElement>(null);
   const avatarText = initials(profile.displayName);
+  const avatarUrl = profile.avatarUrl
+    ?? (profile.username.toLocaleLowerCase() === "atreus" ? "/images/avatar-subaru-v1.png" : null);
+  const visibleNotificationCount = `${Math.min(notificationCount, 99)}${notificationCount > 99 ? "+" : ""}`;
+  const activityItems = activityNav.map((item) => (
+    item.href === "/notificaciones" && notificationCount > 0
+      ? { ...item, badge: visibleNotificationCount }
+      : item
+  ));
 
   useEffect(() => {
     if (!profileOpen) return;
@@ -158,7 +177,7 @@ export function AppShell({
 
         <div className="sidebar-nav-scroll">
           <NavigationGroup label="Principal" items={primaryNav} collapsed={collapsed} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
-          <NavigationGroup label="Actividad" items={activityNav} collapsed={collapsed} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+          <NavigationGroup label="Actividad" items={activityItems} collapsed={collapsed} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
           <NavigationGroup label="Sistema" items={systemNav} collapsed={collapsed} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
           {canAccessAdmin && (
             <div className="nav-group admin-group">
@@ -173,7 +192,7 @@ export function AppShell({
         </div>
 
         <div className="sidebar-user">
-          <span className="avatar avatar-sm avatar-jose" aria-hidden="true">{avatarText}</span>
+          <UserAvatar src={avatarUrl} text={avatarText} />
           {!collapsed && (
             <span className="sidebar-user-copy">
               <strong>{profile.displayName}</strong>
@@ -210,10 +229,10 @@ export function AppShell({
               <Plus aria-hidden="true" size={17} />
               <span>Agregar anime</span>
             </Link>
-            <button className="icon-button notification-button" type="button" aria-label="Abrir notificaciones">
+            <Link className="icon-button notification-button" href="/notificaciones" aria-label="Abrir notificaciones">
               <Bell size={18} />
-              <span className="notification-dot" />
-            </button>
+              {notificationCount > 0 && <span className="notification-count">{visibleNotificationCount}</span>}
+            </Link>
             <button
               ref={profileButtonRef}
               className="profile-button"
@@ -223,7 +242,7 @@ export function AppShell({
               aria-haspopup="menu"
               onClick={() => setProfileOpen((value) => !value)}
             >
-              <span className="avatar avatar-sm avatar-jose" aria-hidden="true">{avatarText}</span>
+              <UserAvatar src={avatarUrl} text={avatarText} />
               <span className="profile-copy"><strong>{profile.displayName}</strong><small>{profile.username ? `@${profile.username}` : "Mi perfil"}</small></span>
               <ChevronLeft className="rotate-90" size={14} />
             </button>

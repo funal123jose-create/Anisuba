@@ -27,6 +27,7 @@ export type LibraryItem = {
   episodesWatched: number;
   episodeCount: number | null;
   isFavorite: boolean;
+  canEditCatalog?: boolean;
   updatedAt: string;
 };
 

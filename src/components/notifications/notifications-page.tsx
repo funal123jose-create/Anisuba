@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useMemo, useState, useTransition } from "react";
 import {
   Bell,
   CalendarDays,
@@ -20,7 +21,17 @@ import {
 import { PanelHeading } from "@/components/ui/panel-heading";
 import type { NotificationData, NotificationItem, NotificationType } from "@/types/notifications";
 
-type NotificationsPageProps = { data: NotificationData; isDemo: boolean };
+type NotificationsPageProps = {
+  data: NotificationData;
+  isDemo: boolean;
+  onMarkRead?: (key: string) => Promise<{ ok: boolean }>;
+  onMarkAllRead?: (keys: string[]) => Promise<{ ok: boolean }>;
+  onSaveReminder?: (key: string) => Promise<{ ok: boolean }>;
+  onUpdatePreference?: (input: {
+    type: "episode" | "season" | "reminder" | "system";
+    enabled: boolean;
+  }) => Promise<{ ok: boolean }>;
+};
 type NotificationFilter = "all" | Exclude<NotificationType, "achievement">;
 
 const notificationConfig = {
@@ -59,7 +70,7 @@ function NotificationRow({
       </div>
       <div className="notification-meta">
         <time>{item.timeLabel}</time>
-        {item.action === "view" && <button className="notification-primary-action" type="button">Ver anime</button>}
+        {item.action === "view" && <Link className="notification-primary-action" href={item.href ?? "/biblioteca"}>Ver anime</Link>}
         {item.action === "remind" && <button className={reminderSaved ? "notification-secondary-action is-saved" : "notification-secondary-action"} onClick={onSaveReminder} type="button">{reminderSaved ? "Recordatorio guardado" : "Recordarme luego"}</button>}
         <button className="notification-read-action" disabled={isRead} onClick={onMarkRead} type="button">Marcar como leída</button>
       </div>
@@ -67,12 +78,20 @@ function NotificationRow({
   );
 }
 
-export function NotificationsPage({ data, isDemo }: NotificationsPageProps) {
+export function NotificationsPage({
+  data,
+  isDemo,
+  onMarkRead,
+  onMarkAllRead,
+  onSaveReminder,
+  onUpdatePreference,
+}: NotificationsPageProps) {
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const [sort, setSort] = useState<"recent" | "oldest">("recent");
   const [readIds, setReadIds] = useState<Record<string, boolean>>({});
   const [savedReminders, setSavedReminders] = useState<Record<string, boolean>>({});
   const [preferences, setPreferences] = useState(() => Object.fromEntries(data.preferences.map((item) => [item.id, item.enabled])));
+  const [, startTransition] = useTransition();
 
   const isRead = (item: NotificationItem) => !item.unread || Boolean(readIds[item.id]);
   const unreadCount = data.items.filter((item) => !isRead(item)).length;
@@ -106,7 +125,7 @@ export function NotificationsPage({ data, isDemo }: NotificationsPageProps) {
           </section>
 
           <section className="panel notification-list">
-            {visibleItems.length ? visibleItems.map((item) => <NotificationRow isRead={isRead(item)} item={item} key={item.id} onMarkRead={() => setReadIds((current) => ({ ...current, [item.id]: true }))} onSaveReminder={() => setSavedReminders((current) => ({ ...current, [item.id]: true }))} reminderSaved={Boolean(savedReminders[item.id])} />) : <div className="notifications-empty"><span><Bell size={23} /></span><h2>No hay notificaciones</h2><p>Las novedades de esta categoría aparecerán aquí.</p></div>}
+            {visibleItems.length ? visibleItems.map((item) => <NotificationRow isRead={isRead(item)} item={item} key={item.id} onMarkRead={() => {setReadIds((current) => ({ ...current, [item.id]: true }));if(onMarkRead)startTransition(async()=>{await onMarkRead(item.id);});}} onSaveReminder={() => {setSavedReminders((current) => ({ ...current, [item.id]: true }));if(onSaveReminder)startTransition(async()=>{await onSaveReminder(item.id);});}} reminderSaved={Boolean(savedReminders[item.id])} />) : <div className="notifications-empty"><span><Bell size={23} /></span><h2>No hay notificaciones</h2><p>Las novedades de esta categoría aparecerán aquí.</p></div>}
           </section>
 
           {visibleItems.length > 0 && <nav className="notification-pagination" aria-label="Paginación de notificaciones"><button aria-label="Página anterior" disabled type="button"><ChevronLeft size={14} /></button><button className="is-active" type="button">1</button><button type="button">2</button><button type="button">3</button><button aria-label="Página siguiente" type="button"><ChevronRight size={14} /></button></nav>}
@@ -118,14 +137,14 @@ export function NotificationsPage({ data, isDemo }: NotificationsPageProps) {
             <div className="notification-summary-value"><strong>{unreadCount}</strong><span>No leídas</span><small>De {data.totalCount} notificaciones en total</small></div>
             <div className="notification-summary-progress"><span style={{ width: `${data.totalCount ? (unreadCount / data.totalCount) * 100 : 0}%` }} /></div>
             <ul>{summary.map((item) => <li key={item.type}><i style={{ background: item.color }} /><span>{item.label}</span><strong>{item.value}</strong></li>)}</ul>
-            <button className="notification-mark-all" onClick={() => setReadIds(Object.fromEntries(data.items.map((item) => [item.id, true])))} type="button"><CheckCircle2 size={14} />Marcar todas como leídas</button>
+            <button className="notification-mark-all" onClick={() => {const ids=data.items.map((item)=>item.id);setReadIds(Object.fromEntries(ids.map((id)=>[id,true])));if(onMarkAllRead)startTransition(async()=>{await onMarkAllRead(ids);});}} type="button"><CheckCircle2 size={14} />Marcar todas como leídas</button>
           </section>
 
           <section className="panel notification-preferences-panel">
             <PanelHeading icon={Settings} title="Preferencias rápidas" tone="#22d3ee" />
             <ul>{data.preferences.map((item) => {
               const enabled = Boolean(preferences[item.id]);
-              return <li key={item.id}><span>{item.label}</span><button aria-label={`${enabled ? "Desactivar" : "Activar"} ${item.label}`} aria-pressed={enabled} onClick={() => setPreferences((current) => ({ ...current, [item.id]: !enabled }))} type="button"><strong>{enabled ? "Activadas" : "Desactivadas"}</strong>{enabled ? <Check size={13} /> : <X size={13} />}</button></li>;
+              return <li key={item.id}><span>{item.label}</span><button aria-label={`${enabled ? "Desactivar" : "Activar"} ${item.label}`} aria-pressed={enabled} onClick={() => {setPreferences((current) => ({ ...current, [item.id]: !enabled }));if(onUpdatePreference)startTransition(async()=>{await onUpdatePreference({type:item.id as "episode"|"season"|"reminder"|"system",enabled:!enabled});});}} type="button"><strong>{enabled ? "Activadas" : "Desactivadas"}</strong>{enabled ? <Check size={13} /> : <X size={13} />}</button></li>;
             })}</ul>
             <button className="notification-settings-link" type="button">Ir a configuración <ChevronRight size={14} /></button>
           </section>

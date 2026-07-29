@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Bookmark,
   BookOpen,
@@ -13,14 +13,18 @@ import {
   Filter,
   Grid2X2,
   Heart,
+  Info,
   List,
   MoreHorizontal,
   Pause,
+  Pencil,
   Play,
+  Save,
   Search,
   SlidersHorizontal,
   Sparkles,
   Star,
+  Trash2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +33,18 @@ import type { LibraryData, LibraryItem, PersonalAnimeStatus } from "@/types/libr
 type LibraryPageProps = {
   data: LibraryData;
   isDemo: boolean;
+  onFavoriteChange?: (input: {
+    franchiseId: string;
+    favorite: boolean;
+  }) => Promise<{ ok: boolean; message?: string }>;
+  onProgressChange?: (input: {
+    franchiseId: string;
+    status: PersonalAnimeStatus;
+    episodesWatched: number;
+  }) => Promise<{ ok: boolean; message?: string }>;
+  onRemove?: (input: {
+    franchiseId: string;
+  }) => Promise<{ ok: boolean; message?: string }>;
 };
 
 type ViewMode = "grid" | "list";
@@ -65,12 +81,56 @@ function LibraryCard({
   view,
   favorite,
   onFavorite,
+  onProgressChange,
+  onRemove,
 }: {
   item: LibraryItem;
   view: ViewMode;
   favorite: boolean;
   onFavorite: () => void;
+  onProgressChange?: LibraryPageProps["onProgressChange"];
+  onRemove?: LibraryPageProps["onRemove"];
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<PersonalAnimeStatus>(item.status);
+  const [draftWatched, setDraftWatched] = useState(String(item.episodesWatched));
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const saveProgress = () => {
+    if (!onProgressChange) return;
+    setActionError(null);
+    startTransition(async () => {
+      const result = await onProgressChange({
+        franchiseId: item.franchiseId,
+        status: draftStatus,
+        episodesWatched: Number(draftWatched) || 0,
+      });
+      if (!result.ok) {
+        setActionError(result.message ?? "No pudimos actualizar el progreso.");
+        return;
+      }
+      setProgressOpen(false);
+      setMenuOpen(false);
+      window.location.reload();
+    });
+  };
+
+  const removeItem = () => {
+    if (!onRemove) return;
+    setActionError(null);
+    startTransition(async () => {
+      const result = await onRemove({ franchiseId: item.franchiseId });
+      if (!result.ok) {
+        setActionError(result.message ?? "No pudimos quitar el anime.");
+        return;
+      }
+      window.location.reload();
+    });
+  };
+
   return (
     <article className={cn("library-card micro-lift", view === "list" && "is-list")}>
       <div className="library-cover-wrap">
@@ -78,6 +138,7 @@ function LibraryCard({
           alt={`Portada de ${item.title}`}
           className="library-cover"
           fill
+          quality={92}
           sizes={view === "list" ? "92px" : "(max-width: 680px) 44vw, 180px"}
           src={item.coverUrl}
         />
@@ -108,8 +169,93 @@ function LibraryCard({
           >
             <Heart fill={favorite ? "currentColor" : "none"} size={15} />
           </button>
-          <button aria-label={`Más acciones para ${item.title}`} type="button"><MoreHorizontal size={16} /></button>
+          <button
+            aria-expanded={menuOpen}
+            aria-label={`Más acciones para ${item.title}`}
+            onClick={() => {
+              setMenuOpen((current) => !current);
+              setConfirmRemove(false);
+              setActionError(null);
+            }}
+            type="button"
+          >
+            <MoreHorizontal size={16} />
+          </button>
         </div>
+        {menuOpen && (
+          <div className="library-card-menu">
+            {item.canEditCatalog && (
+              <Link href={`/agregar-anime/manual?draft=${item.franchiseId}`}>
+                <Pencil size={13} />Editar datos del anime
+              </Link>
+            )}
+            <button
+              onClick={() => {
+                setProgressOpen((current) => !current);
+                setConfirmRemove(false);
+              }}
+              type="button"
+            >
+              <Play size={13} />Actualizar estado y progreso
+            </button>
+            <button
+              className="is-danger"
+              onClick={() => {
+                setConfirmRemove((current) => !current);
+                setProgressOpen(false);
+              }}
+              type="button"
+            >
+              <Trash2 size={13} />Quitar de mi biblioteca
+            </button>
+          </div>
+        )}
+        {menuOpen && progressOpen && (
+          <div className="library-card-editor">
+            <label>
+              <span>Estado</span>
+              <select
+                onChange={(event) => {
+                  const nextStatus = event.target.value as PersonalAnimeStatus;
+                  setDraftStatus(nextStatus);
+                  if (nextStatus === "completed") setDraftWatched(String(item.episodeCount ?? 0));
+                  if (nextStatus === "plan_to_watch") setDraftWatched("0");
+                }}
+                value={draftStatus}
+              >
+                {Object.entries(statusCopy).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Episodios vistos</span>
+              <input
+                max={item.episodeCount ?? undefined}
+                min={0}
+                onChange={(event) => setDraftWatched(event.target.value)}
+                readOnly={draftStatus === "completed" || draftStatus === "plan_to_watch"}
+                type="number"
+                value={draftWatched}
+              />
+            </label>
+            <button disabled={pending || !onProgressChange} onClick={saveProgress} type="button">
+              <Save size={12} />{pending ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </div>
+        )}
+        {menuOpen && confirmRemove && (
+          <div className="library-card-confirm">
+            <p>Se quitará de tu biblioteca. El registro global del anime no se elimina.</p>
+            <div>
+              <button disabled={pending} onClick={() => setConfirmRemove(false)} type="button">Cancelar</button>
+              <button className="is-danger" disabled={pending || !onRemove} onClick={removeItem} type="button">
+                <Trash2 size={12} />{pending ? "Quitando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        )}
+        {actionError && <p className="library-card-error" role="alert">{actionError}</p>}
       </div>
     </article>
   );
@@ -118,7 +264,7 @@ function LibraryCard({
 function RecentAnimeRow({ item, updatedLabel }: { item: LibraryItem; updatedLabel: string }) {
   return (
     <article className="library-side-row library-recent-row micro-row">
-      <Image alt="" height={54} src={item.coverUrl} width={42} />
+      <Image alt="" height={54} quality={92} sizes="42px" src={item.coverUrl} width={42} />
       <span>
         <strong>{item.title}</strong>
         <small>Episodio {item.episodesWatched}</small>
@@ -135,7 +281,7 @@ function RecentAnimeRow({ item, updatedLabel }: { item: LibraryItem; updatedLabe
 function ContinueAnimeRow({ item }: { item: LibraryItem }) {
   return (
     <article className="library-side-row library-continue-row micro-row">
-      <Image alt="" height={54} src={item.coverUrl} width={42} />
+      <Image alt="" height={54} quality={92} sizes="42px" src={item.coverUrl} width={42} />
       <span>
         <strong>{item.title}</strong>
         <small>Episodio {item.episodesWatched} de {item.episodeCount ?? "?"}</small>
@@ -147,7 +293,13 @@ function ContinueAnimeRow({ item }: { item: LibraryItem }) {
   );
 }
 
-export function LibraryPage({ data, isDemo }: LibraryPageProps) {
+export function LibraryPage({
+  data,
+  isDemo,
+  onFavoriteChange,
+  onProgressChange,
+  onRemove,
+}: LibraryPageProps) {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [genre, setGenre] = useState("all");
@@ -155,6 +307,8 @@ export function LibraryPage({ data, isDemo }: LibraryPageProps) {
   const [sort, setSort] = useState<SortMode>("recent");
   const [view, setView] = useState<ViewMode>("grid");
   const [favoriteOverrides, setFavoriteOverrides] = useState<Record<string, boolean>>({});
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+  const [, startFavoriteTransition] = useTransition();
 
   const genres = useMemo(
     () => Array.from(new Set(data.items.flatMap((item) => item.genres))).sort(),
@@ -166,8 +320,10 @@ export function LibraryPage({ data, isDemo }: LibraryPageProps) {
   );
   const recentReference = useMemo(() => {
     const newest = data.recentlyUpdated[0]?.updatedAt;
-    return newest ? new Date(new Date(newest).getTime() + 2 * 60 * 60 * 1000) : new Date();
-  }, [data.recentlyUpdated]);
+    return isDemo && newest
+      ? new Date(new Date(newest).getTime() + 2 * 60 * 60 * 1000)
+      : new Date();
+  }, [data.recentlyUpdated, isDemo]);
   const visibleItems = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("es");
     return data.items
@@ -183,10 +339,36 @@ export function LibraryPage({ data, isDemo }: LibraryPageProps) {
   }, [data.items, genre, query, sort, status, year]);
 
   const toggleFavorite = (item: LibraryItem) => {
+    const previous = favoriteOverrides[item.franchiseId] ?? item.isFavorite;
+    const next = !previous;
     setFavoriteOverrides((current) => ({
       ...current,
-      [item.franchiseId]: !(current[item.franchiseId] ?? item.isFavorite),
+      [item.franchiseId]: next,
     }));
+    setFavoriteError(null);
+
+    if (isDemo) return;
+    if (!onFavoriteChange) {
+      setFavoriteOverrides((current) => ({
+        ...current,
+        [item.franchiseId]: previous,
+      }));
+      setFavoriteError("La actualización real de favoritos no está disponible.");
+      return;
+    }
+    startFavoriteTransition(async () => {
+      const result = await onFavoriteChange({
+        franchiseId: item.franchiseId,
+        favorite: next,
+      });
+      if (!result.ok) {
+        setFavoriteOverrides((current) => ({
+          ...current,
+          [item.franchiseId]: previous,
+        }));
+        setFavoriteError(result.message ?? "No pudimos actualizar favoritos.");
+      }
+    });
   };
 
   return (
@@ -298,6 +480,8 @@ export function LibraryPage({ data, isDemo }: LibraryPageProps) {
                   item={item}
                   key={item.franchiseId}
                   onFavorite={() => toggleFavorite(item)}
+                  onProgressChange={onProgressChange}
+                  onRemove={onRemove}
                   view={view}
                 />
               ))}
@@ -312,12 +496,12 @@ export function LibraryPage({ data, isDemo }: LibraryPageProps) {
 
           {visibleItems.length > 0 && (
             <footer className="library-pagination">
-              <span>Página 1 de 13</span>
+              <span>Página 1 de {isDemo ? 13 : 1}</span>
               <nav aria-label="Paginación">
                 <button aria-label="Página anterior" disabled type="button"><ChevronLeft size={15} /></button>
-                <button className="is-active" type="button">1</button><button type="button">2</button><button type="button">3</button>
-                <span>…</span><button type="button">13</button>
-                <button aria-label="Página siguiente" type="button"><ChevronRight size={15} /></button>
+                <button className="is-active" type="button">1</button>
+                {isDemo && <><button type="button">2</button><button type="button">3</button><span>…</span><button type="button">13</button></>}
+                <button aria-label="Página siguiente" disabled={!isDemo} type="button"><ChevronRight size={15} /></button>
               </nav>
             </footer>
           )}
@@ -328,8 +512,9 @@ export function LibraryPage({ data, isDemo }: LibraryPageProps) {
             <div className="section-heading"><div><Sparkles className="section-heading-icon" size={14} /><h2>Recientemente actualizados</h2></div><button type="button">Ver todos <ChevronRight size={12} /></button></div>
             <div className="library-side-list">
               {data.recentlyUpdated.length ? data.recentlyUpdated.map((item) => {
-                const hours = Math.max(1, Math.round((recentReference.getTime() - new Date(item.updatedAt).getTime()) / 3_600_000));
-                return <RecentAnimeRow item={item} key={item.franchiseId} updatedLabel={hours < 24 ? `Hace ${hours} h` : "Ayer"} />;
+                const hours = Math.max(0, Math.floor((recentReference.getTime() - new Date(item.updatedAt).getTime()) / 3_600_000));
+                const updatedLabel = hours === 0 ? "Ahora" : hours < 24 ? `Hace ${hours} h` : "Ayer";
+                return <RecentAnimeRow item={item} key={item.franchiseId} updatedLabel={updatedLabel} />;
               }) : <p className="library-side-empty">Tus cambios recientes aparecerán aquí.</p>}
             </div>
           </section>
@@ -341,6 +526,12 @@ export function LibraryPage({ data, isDemo }: LibraryPageProps) {
           </section>
         </aside>
       </div>
+      {favoriteError && (
+        <div className="manual-toast is-error" role="alert">
+          <Info size={14} />{favoriteError}
+          <button aria-label="Cerrar mensaje" onClick={() => setFavoriteError(null)} type="button"><X size={13} /></button>
+        </div>
+      )}
     </div>
   );
 }

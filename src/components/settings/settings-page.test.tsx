@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsPage } from "@/components/settings/settings-page";
 
 const props = {
@@ -11,6 +11,9 @@ const props = {
 };
 
 describe("SettingsPage", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
   it("presenta los seis módulos del mockup aprobado", () => {
     render(<SettingsPage {...props} />);
 
@@ -38,14 +41,48 @@ describe("SettingsPage", () => {
     expect(screen.getByRole("button", { name: "Cambios guardados" })).toBeInTheDocument();
   });
 
-  it("abre la previsualización demo para importar MyAnimeList", () => {
+  it("analiza una exportación real antes de importar MyAnimeList", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      filename: "animelist.xml.gz",
+      summary: {
+        total: 191,
+        duplicates: 5,
+        ready: 186,
+        matched: 186,
+        unresolved: 0,
+        counts: { completed: 101, dropped: 0, paused: 27, plan_to_watch: 62, watching: 1 },
+      },
+      items: [{
+        malId: 25397,
+        title: "Absolute Duo",
+        status: "completed",
+        watchedEpisodes: 12,
+        totalEpisodes: 12,
+        score: 8,
+        alreadyCatalogued: false,
+        resolution: "matched",
+        match: {
+          anilistId: 101,
+          title: "Absolute Duo",
+          format: "TV",
+          episodes: 12,
+          coverUrl: "https://img.example/absolute-duo.jpg",
+          seasonYear: 2015,
+        },
+      }],
+    }), { status: 200 })));
     render(<SettingsPage {...props} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Importar biblioteca/ }));
     expect(screen.getByRole("dialog", { name: "Importar desde MyAnimeList" })).toBeInTheDocument();
-    expect(screen.getByText("146")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /Continuar a previsualización/ }));
-    expect(screen.getByRole("status")).toHaveTextContent(/Mockup 30/);
+    fireEvent.change(screen.getByLabelText(/Archivo XML o XML.GZ/), {
+      target: { files: [new File(["gzip"], "animelist.xml.gz", { type: "application/gzip" })] },
+    });
+    expect(await screen.findByText("191")).toBeInTheDocument();
+    const reviewButton = screen.getByRole("button", { name: /Continuar a revisión/ });
+    expect(reviewButton).toBeEnabled();
+    fireEvent.click(reviewButton);
+    expect(screen.getByText("Absolute Duo")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Importar Absolute Duo" })).toBeChecked();
   });
 });

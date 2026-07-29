@@ -1,5 +1,6 @@
 export type ExploreAnime = {
   id: string;
+  anilistId?: number;
   slug: string;
   title: string;
   year: number;
@@ -12,6 +13,7 @@ export type ExploreAnime = {
   format: "TV" | "Película" | "OVA";
   season: "Invierno" | "Primavera" | "Verano" | "Otoño";
   synopsis: string;
+  popularity?: number;
 };
 
 export type ExploreMetric = {
@@ -30,4 +32,6 @@ export type ExploreData = {
   averageRating: number;
   ratingDelta: number;
   ratingDistribution: number[];
+  fetchedAt?: string | null;
+  sourceLabel?: string;
 };

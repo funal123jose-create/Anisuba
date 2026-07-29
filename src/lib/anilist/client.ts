@@ -415,20 +415,27 @@ function isoStartDate(media: AniListMediaPayload) {
 }
 
 async function requestAniList<T>(query: string, variables: Record<string, unknown>) {
-  const response = await fetch(ANILIST_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ query, variables }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) {
-    throw new Error(response.status === 429 ? "ANILIST_RATE_LIMITED" : "ANILIST_UNAVAILABLE");
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await fetch(ANILIST_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ query, variables }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (response.ok) return response.json() as Promise<T>;
+
+    if (response.status !== 429) throw new Error("ANILIST_UNAVAILABLE");
+    const retryAfterSeconds = Number(response.headers.get("retry-after") ?? "1");
+    if (attempt === 1 || !Number.isFinite(retryAfterSeconds) || retryAfterSeconds > 5) {
+      throw new Error("ANILIST_RATE_LIMITED");
+    }
+    await new Promise((resolve) => setTimeout(resolve, Math.max(250, retryAfterSeconds * 1_000)));
   }
-  return response.json() as Promise<T>;
+  throw new Error("ANILIST_RATE_LIMITED");
 }
 
 export async function getAniListAnimeById(id: number) {

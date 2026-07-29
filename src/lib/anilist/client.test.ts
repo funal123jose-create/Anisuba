@@ -92,6 +92,28 @@ describe("searchAniListAnime", () => {
     expect(body.variables).not.toHaveProperty("format");
     expect(body.variables).not.toHaveProperty("seasonYear");
   });
+
+  it("reintenta una vez cuando AniList devuelve un rate limit breve", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, {
+        status: 429,
+        headers: { "retry-after": "0" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: {
+          Page: {
+            pageInfo: { currentPage: 1, hasNextPage: false, total: 1 },
+            media: [media(10, "Anime recuperado", 2024)],
+          },
+        },
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await searchAniListAnime({ query: "Anime recuperado" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.results[0]?.title).toBe("Anime recuperado");
+  });
 });
 
 describe("getAniListRelationSnapshots", () => {

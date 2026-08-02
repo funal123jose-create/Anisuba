@@ -4,6 +4,6 @@ import { createEmptyProfileData } from "@/data/profile-empty";
 import type { ProfileData } from "@/types/profile";
 
 export function getProfilePresentationData(): { data: ProfileData; mode: PresentationDataMode } {
-  const mode = resolvePresentationDataMode();
+  const mode = resolvePresentationDataMode(process.env.ANISUBA_PROFILE_DATA_MODE ?? "demo");
   return { data: mode === "demo" ? profileDemoData : createEmptyProfileData(), mode };
 }

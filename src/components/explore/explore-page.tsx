@@ -155,8 +155,8 @@ export function ExplorePage({ data, isDemo }: ExplorePageProps) {
       <header className="explore-header">
         <div><h1>Explorar</h1><p>Descubre nuevos mundos, historias y emociones.</p></div>
         {isDemo
-          ? <div className="demo-data-pill"><Sparkles size={14} /><strong>Modo demo</strong><span>Catálogo de muestra</span></div>
-          : <div className="explore-live-pill" title={data.fetchedAt ? `Actualizado: ${new Date(data.fetchedAt).toLocaleString("es-PE")}` : undefined}><Radio size={13} /><strong>{data.sourceLabel ?? "AniList en vivo"}</strong><span>Actualizado al abrir</span></div>}
+          ? <div className="demo-data-pill"><Sparkles size={14} /><strong>{data.sourceLabel ?? "Modo demo"}</strong><span>{data.sourceDetail ?? "Catálogo de muestra"}</span></div>
+          : <div className="explore-live-pill" title={data.fetchedAt ? `Actualizado: ${new Date(data.fetchedAt).toLocaleString("es-PE")}` : undefined}><Radio size={13} /><strong>{data.sourceLabel ?? "AniList en vivo"}</strong><span>{data.sourceDetail ?? "Actualizado al abrir"}</span></div>}
       </header>
 
       <div className="explore-layout">
@@ -228,7 +228,7 @@ export function ExplorePage({ data, isDemo }: ExplorePageProps) {
           </section>
           <section className="panel explore-rating-panel">
             <PanelHeading icon={Star} meta="Esta temporada" title="Calificación promedio" tone="#f59e0b" />
-            <div className="explore-rating-value"><Star fill="currentColor" size={24} /><strong>{data.averageRating.toFixed(2)}</strong><span><TrendingUp size={11} />Catálogo consultado en vivo</span></div>
+            <div className="explore-rating-value"><Star fill="currentColor" size={24} /><strong>{data.averageRating.toFixed(2)}</strong><span><TrendingUp size={11} />{data.sourceStatus === "fallback" ? "Respaldo mientras AniList se recupera" : isDemo ? "Catálogo de muestra" : "Catálogo consultado en vivo"}</span></div>
             <div className="explore-rating-bars">{data.ratingDistribution.map((value, index) => <span key={`${value}-${index}`}><span style={{ height: `${value}%` }} /></span>)}</div>
             <div className="explore-rating-axis"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
             <p>Puntuación</p>

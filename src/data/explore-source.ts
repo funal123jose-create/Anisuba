@@ -1,5 +1,4 @@
 import type { PresentationDataMode } from "@/data/data-mode";
-import { createEmptyExploreData } from "@/data/explore-empty";
 import { exploreDemoData } from "@/data/mock/explore";
 import { getAniListDiscoverCatalog, type AniListAnime } from "@/lib/anilist/client";
 import type { ExploreData } from "@/types/explore";
@@ -70,7 +69,7 @@ export function buildRatingDistribution(scores: number[]) {
   return buckets.map((count) => Math.round((count / maximum) * 100));
 }
 
-async function getLiveExploreData(): Promise<ExploreData> {
+async function getLiveExploreData(): Promise<ExploreData | null> {
   try {
     const catalog = await getAniListDiscoverCatalog();
     const trending = catalog.trending.map(mapAnime);
@@ -90,17 +89,38 @@ async function getLiveExploreData(): Promise<ExploreData> {
       ratingDistribution: buildRatingDistribution(scores),
       fetchedAt: new Date().toISOString(),
       sourceLabel: "AniList en vivo",
+      sourceDetail: "Actualizado al abrir",
+      sourceStatus: "live",
     };
   } catch (error) {
     console.error(
       "Could not load AniList discovery catalog",
       error instanceof Error ? error.message : "UNKNOWN",
     );
-    return createEmptyExploreData();
+    return null;
   }
 }
 
 export async function getExplorePresentationData(): Promise<{ data: ExploreData; mode: PresentationDataMode }> {
   const mode = resolveExploreDataMode();
-  return { data: mode === "demo" ? exploreDemoData : await getLiveExploreData(), mode };
+  if (mode === "demo") {
+    return {
+      data: { ...exploreDemoData, sourceStatus: "demo" },
+      mode,
+    };
+  }
+
+  const liveData = await getLiveExploreData();
+  if (liveData) return { data: liveData, mode };
+
+  return {
+    data: {
+      ...exploreDemoData,
+      fetchedAt: new Date().toISOString(),
+      sourceLabel: "Respaldo temporal",
+      sourceDetail: "AniList no disponible",
+      sourceStatus: "fallback",
+    },
+    mode: "demo",
+  };
 }

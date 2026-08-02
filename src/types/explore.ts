@@ -34,4 +34,6 @@ export type ExploreData = {
   ratingDistribution: number[];
   fetchedAt?: string | null;
   sourceLabel?: string;
+  sourceDetail?: string;
+  sourceStatus?: "demo" | "live" | "fallback";
 };

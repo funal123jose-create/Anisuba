@@ -8,8 +8,19 @@ describe("auth redirects", () => {
     expect(safeAuthDestination("https://sitio-externo.test")).toBe("/dashboard");
   });
 
-  it("prioriza la URL canónica configurada", () => {
-    expect(getAuthSiteOrigin("http://127.0.0.1:3000", "http://localhost:3000/")).toBe("http://localhost:3000");
+  it("prioriza la URL canónica de producción configurada", () => {
+    expect(getAuthSiteOrigin("https://preview.vercel.app", "https://anisuba.vercel.app/"))
+      .toBe("https://anisuba.vercel.app");
+  });
+
+  it("impide que una configuración local contamine una solicitud de producción", () => {
+    expect(getAuthSiteOrigin("https://anisuba.vercel.app", "http://localhost:3000/"))
+      .toBe("https://anisuba.vercel.app");
+  });
+
+  it("usa la URL de producción de Vercel si faltan los otros orígenes", () => {
+    expect(getAuthSiteOrigin(null, "", "anisuba.vercel.app"))
+      .toBe("https://anisuba.vercel.app");
   });
 
   it("usa el origen de la solicitud si no existe configuración válida", () => {

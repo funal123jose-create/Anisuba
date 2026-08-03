@@ -4,15 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
+  AlertTriangle,
   Bookmark,
   Building2,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Flame,
   Filter,
   LibraryBig,
   Plus,
-  Radio,
+  RefreshCw,
   SearchX,
   Sparkles,
   Star,
@@ -98,6 +100,16 @@ function SectionHeading({
 }
 
 export function ExplorePage({ data, isDemo }: ExplorePageProps) {
+  const isFallback = data.sourceStatus === "fallback";
+  const isLive = data.sourceStatus === "live" && !isDemo;
+  const checkedAt = data.fetchedAt
+    ? new Intl.DateTimeFormat("es-PE", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "America/Lima",
+      }).format(new Date(data.fetchedAt))
+    : null;
   const catalog = useMemo(() => unique([...data.trending, ...data.popular].map((item) => item.id))
     .map((id) => [...data.trending, ...data.popular].find((item) => item.id === id)!)
     .filter(Boolean), [data.popular, data.trending]);
@@ -154,10 +166,31 @@ export function ExplorePage({ data, isDemo }: ExplorePageProps) {
     <div className="explore-page">
       <header className="explore-header">
         <div><h1>Explorar</h1><p>Descubre nuevos mundos, historias y emociones.</p></div>
-        {isDemo
-          ? <div className="demo-data-pill"><Sparkles size={14} /><strong>{data.sourceLabel ?? "Modo demo"}</strong><span>{data.sourceDetail ?? "Catálogo de muestra"}</span></div>
-          : <div className="explore-live-pill" title={data.fetchedAt ? `Actualizado: ${new Date(data.fetchedAt).toLocaleString("es-PE")}` : undefined}><Radio size={13} /><strong>{data.sourceLabel ?? "AniList en vivo"}</strong><span>{data.sourceDetail ?? "Actualizado al abrir"}</span></div>}
+        <div
+          aria-live="polite"
+          className={cn("explore-connection-pill", isFallback ? "is-fallback" : isLive ? "is-live" : "is-demo")}
+          role="status"
+          title={data.fetchedAt ? `Última comprobación: ${new Date(data.fetchedAt).toLocaleString("es-PE")}` : undefined}
+        >
+          <span className="explore-connection-dot" aria-hidden="true" />
+          {isFallback ? <AlertTriangle size={14} /> : isLive ? <CheckCircle2 size={14} /> : <Sparkles size={14} />}
+          <span className="explore-connection-copy">
+            <strong>{data.sourceLabel ?? (isLive ? "AniList en vivo" : "Modo demo")}</strong>
+            <small>{data.sourceDetail ?? (isLive ? "Conexión activa" : "Catálogo de muestra")}{checkedAt ? ` · ${checkedAt}` : ""}</small>
+          </span>
+        </div>
       </header>
+
+      {isFallback && (
+        <section className="explore-service-notice" aria-label="Estado temporal de AniList">
+          <span><AlertTriangle size={17} /></span>
+          <div>
+            <strong>AniList está temporalmente indisponible</strong>
+            <p>Estás viendo datos de demostración para que Explorar siga siendo útil. Tu biblioteca y tus registros reales no se ven afectados.</p>
+          </div>
+          <button onClick={() => window.location.reload()} type="button"><RefreshCw size={13} />Reintentar conexión</button>
+        </section>
+      )}
 
       <div className="explore-layout">
         <main className="explore-main">

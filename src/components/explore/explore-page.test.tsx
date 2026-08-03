@@ -35,4 +35,19 @@ describe("ExplorePage", () => {
     fireEvent.click(addButton);
     expect(addButton).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("explica claramente cuándo AniList usa el respaldo temporal", () => {
+    render(<ExplorePage data={{
+      ...exploreDemoData,
+      fetchedAt: "2026-08-02T22:00:00.000Z",
+      sourceLabel: "Respaldo temporal",
+      sourceDetail: "AniList no disponible",
+      sourceStatus: "fallback",
+    }} isDemo />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Respaldo temporal");
+    expect(screen.getByText("AniList está temporalmente indisponible")).toBeInTheDocument();
+    expect(screen.getByText(/Tu biblioteca y tus registros reales no se ven afectados/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reintentar conexión" })).toBeInTheDocument();
+  });
 });
